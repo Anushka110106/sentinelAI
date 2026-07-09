@@ -5,13 +5,13 @@ import { ParticleSystem } from './ParticleSystem';
 
 export function Upload3DZone({ isActive }) {
     return (
-        <div className="w-full h-80 rounded-lg overflow-hidden border-2 border-indigo-500 bg-gradient-to-br from-slate-900 via-slate-800 to-slate-900">
+        <div className="w-full h-80 rounded-xl overflow-hidden border-2 border-earth-moss bg-gradient-to-br from-earth-dark via-earth-teal to-earth-dark">
             <Canvas
                 camera={{ position: [0, 0, 30], fov: 75 }}
                 gl={{ antialias: true, alpha: true }}
             >
                 <ambientLight intensity={0.5} />
-                <pointLight position={[10, 10, 10]} intensity={1} color="#4f46e5" />
+                <pointLight position={[10, 10, 10]} intensity={1} color="#839958" />
 
                 <Suspense fallback={null}>
                     {/* Animated particles */}
@@ -21,19 +21,19 @@ export function Upload3DZone({ isActive }) {
                     <Text
                         position={[0, 0, 0]}
                         fontSize={2}
-                        color={isActive ? '#00ff88' : '#a5b4fc'}
+                        color={isActive ? '#F7F4D5' : '#839958'}
                         anchorX="center"
                         anchorY="middle"
                     >
-                        {isActive ? '✨ DROP HERE ✨' : '📄 Drag Files'}
+                        {isActive ? '✨ DROP HERE ✨' : '📄 Drag & Drop PDFs'}
                     </Text>
 
                     {/* Rotating ring */}
                     <mesh rotation={[0, 0, Date.now() * 0.001]}>
                         <torusGeometry args={[15, 0.5, 16, 100]} />
                         <meshStandardMaterial
-                            color={isActive ? '#00ff88' : '#4f46e5'}
-                            emissive={isActive ? '#00ff88' : '#4f46e5'}
+                            color={isActive ? '#F7F4D5' : '#839958'}
+                            emissive={isActive ? '#F7F4D5' : '#839958'}
                             emissiveIntensity={0.8}
                         />
                     </mesh>

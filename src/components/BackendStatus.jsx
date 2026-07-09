@@ -5,6 +5,7 @@ import { checkHealth } from '../api/client';
 export function BackendStatus() {
     const [isHealthy, setIsHealthy] = useState(null);
     const [loading, setLoading] = useState(true);
+    const [info, setInfo] = useState(null);
 
     useEffect(() => {
         checkBackendHealth();
@@ -14,27 +15,33 @@ export function BackendStatus() {
 
     const checkBackendHealth = async () => {
         try {
-            await checkHealth();
+            const response = await checkHealth();
             setIsHealthy(true);
+            setInfo(response.data);
         } catch (error) {
             setIsHealthy(false);
+            setInfo(null);
         } finally {
             setLoading(false);
         }
     };
 
     if (loading) {
-        return null;
+        return (
+            <div className="p-3 rounded-lg text-sm flex items-center gap-2 bg-earth-beige text-earth-moss animate-pulse">
+                <span>⏳</span> Checking backend...
+            </div>
+        );
     }
 
     return (
         <motion.div
             initial={{ opacity: 0, scale: 0.9 }}
             animate={{ opacity: 1, scale: 1 }}
-            className={`p-3 rounded-lg text-sm font-semibold flex items-center gap-2 ${
+            className={`p-3 rounded-lg text-sm font-semibold flex items-center gap-2 transition-all ${
                 isHealthy
-                    ? 'bg-green-500 bg-opacity-20 text-green-300 border border-green-500 border-opacity-50'
-                    : 'bg-red-500 bg-opacity-20 text-red-300 border border-red-500 border-opacity-50'
+                    ? 'bg-green-50 text-earth-dark border border-earth-moss'
+                    : 'bg-red-50 text-earth-dark border border-earth-brown'
             }`}
         >
             <motion.span
@@ -43,7 +50,20 @@ export function BackendStatus() {
             >
                 {isHealthy ? '✅' : '❌'}
             </motion.span>
-            {isHealthy ? 'Backend Ready' : 'Backend Offline'}
+            <div className="flex-1 min-w-0">
+                {isHealthy ? (
+                    <>
+                        <div className="font-bold">Backend Ready</div>
+                        {info && (
+                            <div className="text-xs opacity-70 truncate">
+                                {info.documents_indexed ?? 0} docs • {info.total_chunks ?? 0} chunks
+                            </div>
+                        )}
+                    </>
+                ) : (
+                    <div className="font-bold">Backend Offline</div>
+                )}
+            </div>
         </motion.div>
     );
 }

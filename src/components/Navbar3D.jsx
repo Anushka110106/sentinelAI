@@ -14,26 +14,27 @@ export function Navbar3D() {
     ];
 
     return (
-        <nav className="bg-gradient-to-r from-slate-900 via-indigo-900 to-slate-900 text-white p-4 shadow-2xl border-b-2 border-indigo-500">
-            <div className="max-w-7xl mx-auto">
+        <nav className="bg-white shadow-sm border-b-2 border-earth-moss sticky top-0 z-50">
+            <div className="max-w-7xl mx-auto px-4 py-4">
                 <div className="flex justify-between items-center mb-4">
                     <motion.div
                         initial={{ opacity: 0, x: -20 }}
                         animate={{ opacity: 1, x: 0 }}
-                        className="flex items-center gap-2"
+                        className="flex items-center gap-3"
                     >
-                        <span className="text-3xl">🔍</span>
-                        <h1 className="text-3xl font-black bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
+                        <div className="w-10 h-10 bg-earth-dark rounded-lg flex items-center justify-center text-white text-xl shadow-md">
+                            🔍
+                        </div>
+                        <h1 className="text-2xl font-black text-earth-dark tracking-tight">
                             SentinelAI
                         </h1>
                     </motion.div>
 
-                    <div className="w-96">
+                    <div className="w-72">
                         <BackendStatus />
                     </div>
                 </div>
 
-                {/* Navigation Items */}
                 <div className="flex gap-2 flex-wrap">
                     {navItems.map((item, i) => (
                         <motion.div
@@ -44,12 +45,12 @@ export function Navbar3D() {
                         >
                             <Link to={item.path}>
                                 <motion.button
-                                    whileHover={{ scale: 1.05, boxShadow: '0 0 20px rgba(79, 70, 229, 0.5)' }}
+                                    whileHover={{ scale: 1.05 }}
                                     whileTap={{ scale: 0.95 }}
-                                    className={`px-4 py-2 rounded-lg font-semibold transition flex items-center gap-2 ${
+                                    className={`px-4 py-2 rounded-lg font-semibold transition-all flex items-center gap-2 text-sm ${
                                         location.pathname === item.path
-                                            ? 'bg-indigo-600 text-white shadow-lg shadow-indigo-500/50'
-                                            : 'bg-slate-800 text-slate-300 hover:bg-slate-700'
+                                            ? 'bg-earth-dark text-white shadow-md'
+                                            : 'bg-earth-beige text-earth-dark hover:bg-earth-moss hover:text-white'
                                     }`}
                                 >
                                     <span>{item.icon}</span>
