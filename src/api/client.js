@@ -1,31 +1,42 @@
-import axios from 'axios';
-
 const API_BASE = 'http://localhost:8000/api';
 
-export const apiClient = axios.create({
-    baseURL: API_BASE,
-    timeout: 60000,
-    headers: {
-        'Content-Type': 'application/json',
-    },
-});
+const request = async (path, { method = 'GET', body, headers = {}, isFormData = false } = {}) => {
+    const options = {
+        method,
+        headers,
+    };
 
-apiClient.interceptors.request.use(request => {
-    console.log('Making request to:', request.url);
-    return request;
-});
-
-apiClient.interceptors.response.use(
-    response => response,
-    error => {
-        console.error('API Error:', error.message);
-        if (error.response) {
-            console.error('Status:', error.response.status);
-            console.error('Data:', error.response.data);
-        }
-        return Promise.reject(error);
+    if (body !== undefined) {
+        options.body = body;
     }
-);
+
+    if (!isFormData) {
+        options.headers = {
+            'Content-Type': 'application/json',
+            ...headers,
+        };
+    }
+
+    const response = await fetch(`${API_BASE}${path}`, options);
+    const contentType = response.headers.get('content-type') || '';
+    const data = contentType.includes('application/json')
+        ? await response.json().catch(() => null)
+        : await response.text().catch(() => null);
+
+    if (!response.ok) {
+        const error = new Error(data?.detail || 'Request failed');
+        error.response = { status: response.status, data };
+        throw error;
+    }
+
+    return { data };
+};
+
+export const apiClient = {
+    get: (path, config) => request(path, { ...config, method: 'GET' }),
+    post: (path, body, config) => request(path, { ...config, method: 'POST', body }),
+    delete: (path, config) => request(path, { ...config, method: 'DELETE' }),
+};
 
 // ============================================
 // DOCUMENT MANAGEMENT ENDPOINTS
@@ -36,11 +47,9 @@ export const uploadDocuments = async (files) => {
     Array.from(files).forEach(file => {
         formData.append('files', file);
     });
-    
+
     return apiClient.post('/upload', formData, {
-        headers: {
-            'Content-Type': 'multipart/form-data',
-        },
+        isFormData: true,
     });
 };
 
@@ -57,10 +66,10 @@ export const deleteDocument = async (docId) => {
 // ============================================
 
 export const query = async (question, topK = 5) => {
-    return apiClient.post('/query', {
+    return apiClient.post('/query', JSON.stringify({
         question,
         top_k: topK,
-    });
+    }));
 };
 
 export const getChatHistory = async () => {
@@ -68,7 +77,7 @@ export const getChatHistory = async () => {
 };
 
 export const clearChatHistory = async () => {
-    return apiClient.post('/chat-history/clear');
+    return apiClient.post('/chat-history/clear', undefined);
 };
 
 // ============================================
