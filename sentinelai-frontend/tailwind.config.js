@@ -7,6 +7,8 @@ export default {
   theme: {
     extend: {
       colors: {
+        primary: '#2563eb',
+        secondary: '#7c3aed',
         'earth': {
           'dark': '#0A3323',      // Dark green - primary
           'moss': '#839958',      // Moss green - secondary

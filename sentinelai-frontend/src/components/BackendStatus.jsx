@@ -28,7 +28,7 @@ export function BackendStatus() {
 
     if (loading) {
         return (
-            <div className="p-3 rounded-lg text-sm flex items-center gap-2 bg-earth-beige text-earth-moss animate-pulse">
+            <div className="p-3 rounded-lg text-sm flex items-center gap-2 bg-slate-800/40 text-slate-400 border border-slate-700/50 animate-pulse">
                 <span>⏳</span> Checking backend...
             </div>
         );
@@ -40,8 +40,8 @@ export function BackendStatus() {
             animate={{ opacity: 1, scale: 1 }}
             className={`p-3 rounded-lg text-sm font-semibold flex items-center gap-2 transition-all ${
                 isHealthy
-                    ? 'bg-green-50 text-earth-dark border border-earth-moss'
-                    : 'bg-red-50 text-earth-dark border border-earth-brown'
+                    ? 'bg-emerald-950/40 text-emerald-300 border border-emerald-500/35'
+                    : 'bg-rose-950/40 text-rose-300 border border-rose-500/35'
             }`}
         >
             <motion.span

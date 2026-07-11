@@ -108,9 +108,9 @@ export function DocumentManager3D() {
                         initial={{ opacity: 0, scale: 0.9 }}
                         animate={{ opacity: 1, scale: 1 }}
                         exit={{ opacity: 0, scale: 0.9 }}
-                        className="bg-earth-beige rounded-xl p-6 border-2 border-earth-moss shadow-md"
+                        className="bg-indigo-950/60 rounded-xl p-6 border border-indigo-500/30 shadow-2xl"
                     >
-                        <h3 className="text-lg font-bold text-earth-dark mb-3">
+                        <h3 className="text-lg font-bold text-indigo-300 mb-3">
                             📦 {selectedFiles.length} file(s) ready
                         </h3>
                         <div className="space-y-2 mb-4 max-h-48 overflow-y-auto pr-1">
@@ -120,12 +120,12 @@ export function DocumentManager3D() {
                                     initial={{ opacity: 0, x: -20 }}
                                     animate={{ opacity: 1, x: 0 }}
                                     transition={{ delay: i * 0.05 }}
-                                    className="flex items-center justify-between bg-white p-3 rounded-lg border-l-4 border-earth-dark"
+                                    className="flex items-center justify-between bg-slate-900/50 p-3 rounded-lg border-l-4 border-indigo-500 border border-y-slate-800 border-r-slate-800"
                                 >
-                                    <span className="text-earth-dark font-medium truncate">
+                                    <span className="text-slate-200 font-medium truncate">
                                         📄 {file.name}
                                     </span>
-                                    <span className="text-sm text-earth-moss font-semibold ml-2 shrink-0">
+                                    <span className="text-sm text-indigo-400 font-semibold ml-2 shrink-0">
                                         {(file.size / 1024 / 1024).toFixed(2)} MB
                                     </span>
                                 </motion.div>
@@ -134,7 +134,7 @@ export function DocumentManager3D() {
                         <button
                             onClick={handleUpload}
                             disabled={uploading}
-                            className="w-full bg-earth-dark text-white font-bold py-3 rounded-lg hover:bg-earth-teal transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+                            className="w-full bg-indigo-600 hover:bg-indigo-500 text-white font-bold py-3 rounded-lg transition disabled:opacity-50 disabled:cursor-not-allowed shadow-md shadow-indigo-600/10"
                         >
                             {uploading ? '⏳ Processing & Indexing...' : '🚀 Upload & Index'}
                         </button>
@@ -149,7 +149,7 @@ export function DocumentManager3D() {
                         initial={{ opacity: 0, y: -10 }}
                         animate={{ opacity: 1, y: 0 }}
                         exit={{ opacity: 0, y: -10 }}
-                        className="bg-red-50 border-l-4 border-earth-brown p-4 rounded-lg text-earth-dark"
+                        className="bg-red-950/40 border border-red-500/30 p-4 rounded-lg text-red-300"
                     >
                         <div className="font-bold">⚠️ Error</div>
                         <div className="text-sm mt-1">{uploadError}</div>
@@ -160,13 +160,13 @@ export function DocumentManager3D() {
             {/* Documents Section */}
             <div>
                 <div className="flex justify-between items-center mb-6">
-                    <h2 className="text-3xl font-black text-earth-dark">📚 Documents</h2>
+                    <h2 className="text-3xl font-black text-slate-100">📚 Documents</h2>
                     <motion.button
                         onClick={loadDocuments}
                         disabled={loading}
                         whileHover={{ scale: 1.05 }}
                         whileTap={{ scale: 0.95 }}
-                        className="px-4 py-2 bg-earth-moss text-white rounded-lg hover:bg-earth-dark transition-colors disabled:opacity-50 font-semibold"
+                        className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg transition font-semibold"
                     >
                         {loading ? '🔄 Refreshing...' : '🔄 Refresh'}
                     </motion.button>
@@ -180,20 +180,20 @@ export function DocumentManager3D() {
                         className="text-center py-16"
                     >
                         <div className="inline-block">
-                            <div className="w-12 h-12 border-4 border-earth-beige border-t-earth-moss rounded-full animate-spin"></div>
+                            <div className="w-12 h-12 border-4 border-slate-800 border-t-indigo-500 rounded-full animate-spin"></div>
                         </div>
-                        <p className="mt-4 text-earth-dark font-semibold">Loading documents...</p>
+                        <p className="mt-4 text-slate-400 font-semibold">Loading documents...</p>
                     </motion.div>
                 ) : documents.length === 0 ? (
                     /* Empty State - REAL DATA - no fake documents */
                     <motion.div
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
-                        className="text-center py-16 bg-white rounded-xl border-2 border-earth-beige shadow-sm"
+                        className="text-center py-16 bg-slate-900/60 rounded-xl border border-slate-800 border-dashed shadow-sm"
                     >
                         <div className="text-6xl mb-4">📄</div>
-                        <p className="text-xl font-bold text-earth-dark">No documents yet</p>
-                        <p className="text-earth-moss mt-2">Upload research papers to get started</p>
+                        <p className="text-xl font-bold text-slate-200">No documents yet</p>
+                        <p className="text-slate-400 mt-2">Upload research papers to get started</p>
                     </motion.div>
                 ) : (
                     /* Document Grid - REAL DATA ONLY */
@@ -210,7 +210,7 @@ export function DocumentManager3D() {
                                     animate={{ opacity: 1, scale: 1 }}
                                     exit={{ opacity: 0, scale: 0.8 }}
                                     whileHover={{ y: -6 }}
-                                    className="bg-white rounded-xl shadow-md p-6 border-l-4 border-earth-dark hover:shadow-lg transition-all"
+                                    className="bg-slate-900/90 rounded-xl shadow-xl p-6 border-l-4 border-indigo-500 border-y-slate-800/80 border-r-slate-800/80 hover:border-slate-700 transition-all"
                                 >
                                     <div className="flex items-start justify-between mb-4">
                                         <div className="text-4xl">📄</div>
@@ -218,40 +218,40 @@ export function DocumentManager3D() {
                                             onClick={() => handleDelete(doc.id, doc.filename)}
                                             whileHover={{ scale: 1.2 }}
                                             whileTap={{ scale: 0.9 }}
-                                            className="text-earth-brown hover:text-red-600 text-xl transition-colors"
+                                            className="text-slate-500 hover:text-red-400 text-xl transition-colors"
                                             title="Delete document"
                                         >
                                             ✕
                                         </motion.button>
                                     </div>
 
-                                    <h3 className="font-bold text-earth-dark truncate mb-3 text-base" title={doc.filename}>
+                                    <h3 className="font-bold text-slate-200 truncate mb-3 text-base" title={doc.filename}>
                                         {doc.filename}
                                     </h3>
 
                                     <div className="space-y-2 text-sm">
-                                        <div className="flex justify-between text-earth-moss">
+                                        <div className="flex justify-between text-slate-400">
                                             <span>📖 Pages</span>
-                                            <span className="font-semibold text-earth-dark">{doc.total_pages ?? '—'}</span>
+                                            <span className="font-semibold text-slate-200">{doc.total_pages ?? '—'}</span>
                                         </div>
-                                        <div className="flex justify-between text-earth-moss">
+                                        <div className="flex justify-between text-slate-400">
                                             <span>🔗 Chunks</span>
-                                            <span className="font-semibold text-earth-dark">{doc.chunk_count ?? '—'}</span>
+                                            <span className="font-semibold text-slate-200">{doc.chunk_count ?? '—'}</span>
                                         </div>
-                                        <div className="flex justify-between text-earth-moss">
+                                        <div className="flex justify-between text-slate-400">
                                             <span>📅 Uploaded</span>
-                                            <span className="font-semibold text-earth-dark">
+                                            <span className="font-semibold text-slate-200">
                                                 {new Date(doc.upload_timestamp).toLocaleDateString()}
                                             </span>
                                         </div>
 
-                                        <div className="pt-3 border-t-2 border-earth-beige">
+                                        <div className="pt-3 border-t border-slate-800">
                                             <span className={`px-3 py-1 rounded-full text-xs font-bold inline-block ${
                                                 doc.status === 'indexed'
-                                                    ? 'bg-green-100 text-green-700'
+                                                    ? 'bg-emerald-500/10 text-emerald-400 border border-emerald-500/20'
                                                     : doc.status === 'processing'
-                                                    ? 'bg-yellow-100 text-yellow-700'
-                                                    : 'bg-earth-beige text-earth-moss'
+                                                    ? 'bg-amber-500/10 text-amber-400 border border-amber-500/20'
+                                                    : 'bg-slate-800 text-slate-400'
                                             }`}>
                                                 {doc.status === 'indexed' ? '✅ Ready' : `⏳ ${doc.status}`}
                                             </span>

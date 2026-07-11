@@ -104,8 +104,8 @@ export function GapsPage() {
                                 </p>
 
                                 {/* Source ref */}
-                                <div className="bg-slate-900/60 rounded-xl p-3 border border-slate-850">
-                                    <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider block">
+                                <div className="bg-slate-950/70 rounded-xl p-3 border border-slate-800">
+                                    <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block">
                                         Identified In Source
                                     </span>
                                     <span className="text-[11px] font-medium text-blue-400 block mt-0.5 truncate">
@@ -119,7 +119,7 @@ export function GapsPage() {
                                 <span className="text-[10px] text-emerald-400 font-bold uppercase tracking-wider block">
                                     Recommended Action
                                 </span>
-                                <p className="text-xs text-slate-400 mt-1 leading-relaxed italic">
+                                <p className="text-xs text-slate-300 mt-1 leading-relaxed italic">
                                     "{gap.suggestion}"
                                 </p>
                             </div>

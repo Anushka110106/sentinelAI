@@ -18,8 +18,8 @@ body {
   font-family: 'Inter', system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  background: linear-gradient(135deg, #F7F4D5 0%, #FAFAF6 100%);
-  color: #0A3323;
+  background: linear-gradient(135deg, #020617 0%, #0f172a 60%, #020617 100%);
+  color: #f8fafc;
 }
 
 #root {
@@ -33,22 +33,27 @@ body {
 }
 
 ::-webkit-scrollbar-track {
-  background: #F7F4D5;
+  background: rgba(15, 23, 42, 0.5);
 }
 
 ::-webkit-scrollbar-thumb {
-  background: #839958;
+  background: #4f46e5;
   border-radius: 4px;
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: #0A3323;
+  background: #6366f1;
 }
 
 /* Animations */
 @keyframes float {
   0%, 100% { transform: translateY(0px); }
   50% { transform: translateY(-10px); }
+}
+
+@keyframes glow {
+  0%, 100% { box-shadow: 0 0 5px rgba(79, 70, 229, 0.4); }
+  50% { box-shadow: 0 0 18px rgba(79, 70, 229, 0.8); }
 }
 
 @keyframes pulse-gentle {
@@ -70,6 +75,10 @@ body {
   animation: float 3s ease-in-out infinite;
 }
 
+.glow {
+  animation: glow 2s ease-in-out infinite;
+}
+
 .pulse-gentle {
   animation: pulse-gentle 2s ease-in-out infinite;
 }
@@ -78,13 +87,21 @@ body {
   animation: shimmer 2s infinite;
   background: linear-gradient(
     to right,
-    #F7F4D5 0%,
-    #FAFAF6 50%,
-    #F7F4D5 100%
+    #1e293b 0%,
+    #334155 50%,
+    #1e293b 100%
   );
   background-size: 1000px 100%;
 }
 
 .fade-in-up {
   animation: fadeInUp 0.4s ease-out both;
+}
+
+/* Custom Glassmorphism styles */
+.glass {
+  background: rgba(15, 23, 42, 0.88);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+  border: 1px solid rgba(99, 102, 241, 0.25);
 }

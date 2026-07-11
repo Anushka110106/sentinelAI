@@ -17,7 +17,11 @@ export default defineConfig({
       { find: /^react$/, replacement: `${G}/react/index.js` },
       { find: /^react-dom\/(.+)$/, replacement: `${G}/react-dom/$1` },
       { find: /^react-dom$/, replacement: `${G}/react-dom/index.js` },
-      { find: /^react-router-dom$/, replacement: `${G}/react-router-dom/dist/index.js` },
+      { find: /^react-router-dom$/, replacement: `${G}/react-router-dom/dist/index.mjs` },
+      { find: /^react-router\/dom$/, replacement: `${G}/react-router-dom/node_modules/react-router/dist/production/dom-export.mjs` },
+      { find: /^react-router$/, replacement: `${G}/react-router-dom/node_modules/react-router/dist/production/index.mjs` },
+      { find: /^use-sync-external-store\/(.+)$/, replacement: `${G}/@react-three/fiber/node_modules/use-sync-external-store/$1` },
+      { find: /^use-sync-external-store$/, replacement: `${G}/@react-three/fiber/node_modules/use-sync-external-store/index.js` },
       { find: /^framer-motion$/, replacement: `${G}/framer-motion/dist/es/index.mjs` },
       { find: /^framer-motion\/(.+)$/, replacement: `${G}/framer-motion/dist/es/$1.mjs` },
       { find: /^axios$/, replacement: `${G}/axios/dist/axios.js` },
@@ -34,7 +38,7 @@ export default defineConfig({
     host: true,
   },
   optimizeDeps: {
-    exclude: ['react', 'react-dom', 'react-router-dom', 'framer-motion', 'axios', 'three', '@react-three/fiber', '@react-three/drei', 'zustand'],
+    exclude: [],
   },
 })
 
