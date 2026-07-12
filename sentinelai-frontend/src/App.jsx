@@ -1,29 +1,50 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { Navbar3D } from './components/Navbar3D';
+import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { AnimatePresence } from 'framer-motion';
+import { Navbar } from './components/Navbar';
+import { ErrorBoundary } from './components/ErrorBoundary';
+import { DashboardPage } from './pages/Dashboard';
 import { ChatPage } from './pages/Chat';
 import { GraphPage } from './pages/Graph';
 import { ContradictionsPage } from './pages/Contradictions';
 import { GapsPage } from './pages/Gaps';
 import { DocumentsPage } from './pages/Documents';
-import { ThreeDContainer } from './components/ThreeDContainer';
+import { PageTransition } from './components/PageTransition';
+
+function AnimatedRoutes() {
+    const location = useLocation();
+    return (
+        <AnimatePresence mode="wait">
+            <PageTransition key={location.pathname}>
+                <Routes location={location}>
+                    <Route path="/" element={<DashboardPage />} />
+                    <Route path="/chat" element={<ChatPage />} />
+                    <Route path="/graph" element={<GraphPage />} />
+                    <Route path="/contradictions" element={<ContradictionsPage />} />
+                    <Route path="/gaps" element={<GapsPage />} />
+                    <Route path="/documents" element={<DocumentsPage />} />
+                </Routes>
+            </PageTransition>
+        </AnimatePresence>
+    );
+}
+
+import { ToastProvider } from './components/Toast';
+import { CommandPalette } from './components/CommandPalette';
 
 function App() {
     return (
         <Router>
-            <div className="min-h-screen bg-gradient-to-br from-slate-900 via-indigo-900 to-slate-900 text-slate-100">
-                <Navbar3D />
-                <main className="max-w-7xl mx-auto px-4 py-6">
-                    <ThreeDContainer>
-                        <Routes>
-                            <Route path="/" element={<ChatPage />} />
-                            <Route path="/graph" element={<GraphPage />} />
-                            <Route path="/contradictions" element={<ContradictionsPage />} />
-                            <Route path="/gaps" element={<GapsPage />} />
-                            <Route path="/documents" element={<DocumentsPage />} />
-                        </Routes>
-                    </ThreeDContainer>
-                </main>
-            </div>
+            <ErrorBoundary>
+                <ToastProvider>
+                    <div className="min-h-screen bg-surface-0 text-white">
+                        <Navbar />
+                        <main>
+                            <AnimatedRoutes />
+                        </main>
+                        <CommandPalette />
+                    </div>
+                </ToastProvider>
+            </ErrorBoundary>
         </Router>
     );
 }
