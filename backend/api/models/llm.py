@@ -5,9 +5,16 @@ class LLMClient:
         self.model = model
         self.endpoint = endpoint
 
-    def generate(self, prompt, max_tokens=500):
+    def generate(self, prompt, max_tokens=250):
         response = requests.post(
             f'{self.endpoint}/api/generate',
-            json={'model': self.model, 'prompt': prompt, 'stream': False}
+            json={
+                'model': self.model,
+                'prompt': prompt,
+                'stream': False,
+                'options': {
+                    'num_predict': max_tokens
+                }
+            }
         )
         return response.json()['response']
