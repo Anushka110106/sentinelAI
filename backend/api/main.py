@@ -43,6 +43,44 @@ async def startup():
     embedder = EmbeddingModel()
     logger.info("Database initialized, embedding model loaded")
 
+def run_full_analysis():
+    """Recompute contradictions, gaps, and graph data, and cache them in the database.
+    Called after documents change (upload/delete) instead of on every GET request."""
+    docs = SentinelDB.get_all_documents()
+    all_chunks = SentinelDB.get_all_chunks()
+
+    all_claims = []
+    all_gap_items = []
+    graphs = []
+
+    for doc in docs:
+        doc_chunks = [c for c in all_chunks if c['doc_id'] == doc['id']]
+        if not doc_chunks:
+            continue
+
+        claims = extract_claims(doc_chunks, doc['id'])
+        all_claims.extend(claims)
+
+        gap_items = extract_limitations(doc_chunks, doc['id'], doc['filename'])
+        all_gap_items.extend(gap_items)
+
+        graph = extract_entities_and_relationships(doc_chunks, doc['id'], doc['filename'])
+        graphs.append(graph)
+
+    if all_claims:
+        SentinelDB.add_claims(all_claims)
+
+    contradictions = find_contradictions(all_claims) if all_claims else []
+    SentinelDB.save_contradictions(contradictions)
+
+    gaps = cluster_and_rank_gaps(all_gap_items, min_doc_mentions=2) if all_gap_items else []
+    SentinelDB.save_gaps(gaps)
+
+    merged_graph = merge_graphs(graphs) if graphs else {'nodes': [], 'links': []}
+    SentinelDB.save_graph(merged_graph)
+
+    logger.info(f"Analysis complete: {len(contradictions)} contradictions, {len(gaps)} gaps, {len(merged_graph['nodes'])} graph nodes")
+
 @app.get("/health")
 async def health():
     return {"status": "ok"}
@@ -111,6 +149,7 @@ async def get_documents():
 async def delete_document(doc_id: str):
     SentinelDB.delete_document(doc_id)
     rebuild_index()
+    run_full_analysis()
     return {'status': 'ok'}
 
 @app.post("/api/query")
@@ -194,55 +233,14 @@ Answer:"""
 
 @app.get("/api/contradictions")
 async def get_contradictions():
-    docs = SentinelDB.get_all_documents()
-    all_chunks = SentinelDB.get_all_chunks()
-
-    all_claims = []
-    for doc in docs:
-        doc_chunks = [c for c in all_chunks if c['doc_id'] == doc['id']]
-        claims = extract_claims(doc_chunks, doc['id'])
-        all_claims.extend(claims)
-
-    if all_claims:
-        SentinelDB.add_claims(all_claims)
-
-    contradictions = find_contradictions(all_claims)
-    if contradictions:
-        SentinelDB.save_contradictions(contradictions)
-
-    return {'contradictions': contradictions}
+    return {'contradictions': SentinelDB.get_contradictions()}
 
 
 @app.get("/api/gaps")
 async def get_gaps():
-    docs = SentinelDB.get_all_documents()
-    all_chunks = SentinelDB.get_all_chunks()
-
-    all_items = []
-    for doc in docs:
-        doc_chunks = [c for c in all_chunks if c['doc_id'] == doc['id']]
-        items = extract_limitations(doc_chunks, doc['id'], doc['filename'])
-        all_items.extend(items)
-
-    gaps = cluster_and_rank_gaps(all_items, min_doc_mentions=2)
-    if gaps:
-        SentinelDB.save_gaps(gaps)
-
-    return {'gaps': gaps}
+    return {'gaps': SentinelDB.get_gaps()}
 
 
 @app.get("/api/graph-data")
 async def get_graph_data():
-    docs = SentinelDB.get_all_documents()
-    all_chunks = SentinelDB.get_all_chunks()
-
-    graphs = []
-    for doc in docs:
-        doc_chunks = [c for c in all_chunks if c['doc_id'] == doc['id']]
-        graph = extract_entities_and_relationships(doc_chunks, doc['id'], doc['filename'])
-        graphs.append(graph)
-
-    merged = merge_graphs(graphs)
-    SentinelDB.save_graph(merged)
-
-    return merged
+    return SentinelDB.get_graph_data()
