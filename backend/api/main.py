@@ -112,7 +112,7 @@ async def delete_document(doc_id: str):
 @app.post("/api/query")
 async def query(payload: dict):
     question = payload.get("question", "")
-    top_k = payload.get("top_k", 7)
+    top_k = payload.get("top_k", 10)
 
     if not question:
         raise HTTPException(status_code=400, detail="question is required")
@@ -137,7 +137,7 @@ async def query(payload: dict):
     chunks_by_id = {c['chunk_id']: c for c in all_chunks}
     retrieved_chunks = [chunks_by_id[cid] for cid in chunk_ids if cid in chunks_by_id]
     retrieval_time = time.time() - retrieval_start
-
+    logger.info(f"Retrieved {len(retrieved_chunks)} chunks in {retrieval_time*1000:.0f}ms")
     if not retrieved_chunks:
         return {
             'answer': "No supporting evidence was found within the uploaded documents.",
@@ -151,24 +151,25 @@ async def query(payload: dict):
         f"[Source: {c['doc_name']}, Page {c['page']}]\n{c['text']}"
         for c in retrieved_chunks
     ])
-    prompt = f"""You are a strict evidence-based assistant. You must NEVER use knowledge outside the evidence below, even if you know the answer from general knowledge. This is critical.
+    prompt = f"""Answer the question using the evidence below. The evidence comes from a document the user uploaded, so trust it as your source of truth.
 
 Evidence:
 {evidence_text}
 
 Question: {question}
 
-Instructions: Check if the evidence above actually contains information that answers the question. If it does not, you MUST respond with exactly this sentence and nothing else: "No supporting evidence was found within the uploaded documents."
-
-Do not answer from general knowledge under any circumstances, even for simple factual questions.
+Instructions:
+- If the evidence contains information that answers the question, answer clearly and directly using that information.
+- Only say "No supporting evidence was found within the uploaded documents." if the evidence truly does not address the question at all (for example, if the question is about something unrelated to the evidence, like general trivia).
+- Do not add outside knowledge beyond what is written in the evidence.
 
 Answer:"""
-
-    # LLM generation
+    
+# LLM generation
     llm_start = time.time()
     answer = llm.generate(prompt)
     llm_time = time.time() - llm_start
-
+    logger.info(f"LLM generated response in {llm_time*1000:.0f}ms")
     citations = [
         {
             'doc_id': c['doc_id'],
