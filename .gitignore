@@ -47,3 +47,5 @@ backend/venv/
 __pycache__/
 *.pyc
 Thumbs.db
+backend/*.pdf
+data/
