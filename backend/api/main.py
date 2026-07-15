@@ -1,3 +1,7 @@
+from api.models.claim_extractor import extract_claims
+from api.models.contradiction_detector import find_contradictions
+from api.models.gap_detector import extract_limitations, cluster_and_rank_gaps
+from api.models.graph_builder import extract_entities_and_relationships, merge_graphs
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 import logging
@@ -187,3 +191,58 @@ Answer:"""
         'retrieval_time_ms': retrieval_time * 1000,
         'llm_time_ms': llm_time * 1000
     }
+
+@app.get("/api/contradictions")
+async def get_contradictions():
+    docs = SentinelDB.get_all_documents()
+    all_chunks = SentinelDB.get_all_chunks()
+
+    all_claims = []
+    for doc in docs:
+        doc_chunks = [c for c in all_chunks if c['doc_id'] == doc['id']]
+        claims = extract_claims(doc_chunks, doc['id'])
+        all_claims.extend(claims)
+
+    if all_claims:
+        SentinelDB.add_claims(all_claims)
+
+    contradictions = find_contradictions(all_claims)
+    if contradictions:
+        SentinelDB.save_contradictions(contradictions)
+
+    return {'contradictions': contradictions}
+
+
+@app.get("/api/gaps")
+async def get_gaps():
+    docs = SentinelDB.get_all_documents()
+    all_chunks = SentinelDB.get_all_chunks()
+
+    all_items = []
+    for doc in docs:
+        doc_chunks = [c for c in all_chunks if c['doc_id'] == doc['id']]
+        items = extract_limitations(doc_chunks, doc['id'], doc['filename'])
+        all_items.extend(items)
+
+    gaps = cluster_and_rank_gaps(all_items, min_doc_mentions=2)
+    if gaps:
+        SentinelDB.save_gaps(gaps)
+
+    return {'gaps': gaps}
+
+
+@app.get("/api/graph-data")
+async def get_graph_data():
+    docs = SentinelDB.get_all_documents()
+    all_chunks = SentinelDB.get_all_chunks()
+
+    graphs = []
+    for doc in docs:
+        doc_chunks = [c for c in all_chunks if c['doc_id'] == doc['id']]
+        graph = extract_entities_and_relationships(doc_chunks, doc['id'], doc['filename'])
+        graphs.append(graph)
+
+    merged = merge_graphs(graphs)
+    SentinelDB.save_graph(merged)
+
+    return merged
