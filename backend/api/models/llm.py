@@ -18,7 +18,9 @@ class LLMClient:
                         'model': self.model,
                         'prompt': prompt,
                         'stream': False,
-                        'options': {'num_predict': max_tokens}
+                        'options': {
+                            'num_predict': max_tokens,
+                            'temperature': 0.1}
                     },
                     timeout=timeout
                 )

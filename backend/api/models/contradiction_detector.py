@@ -13,7 +13,7 @@ def cosine_similarity(a, b):
     b = np.array(b)
     return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
 
-def find_contradictions(claims, similarity_threshold=0.75):
+def find_contradictions(claims, similarity_threshold=0.70):
     """Compare claims pairwise across documents to find likely contradictions."""
     if len(claims) < 2:
         return []
@@ -60,14 +60,16 @@ def find_contradictions(claims, similarity_threshold=0.75):
     return contradictions
 
 def explain_difference(claim_a, claim_b):
-    """Ask the LLM whether two similar claims actually conflict, and why."""
-    prompt = f"""Compare these two claims from different research papers on a similar topic:
+    """Ask the LLM to identify if two similar claims report different values/conclusions worth flagging for review."""
+    prompt = f"""These two claims are from different research papers and discuss a similar topic:
 
 Claim A: {claim_a}
 Claim B: {claim_b}
 
-Do these claims genuinely contradict or conflict with each other? Respond with ONLY a JSON object, nothing else:
-{{"contradicts": true or false, "summary": "short summary if they contradict", "reason": "likely reason for the difference if any"}}
+Your task: determine if these two claims report DIFFERENT specific values, numbers, or conclusions on the same topic - even if there could be a reasonable explanation for the difference. This is for a research review tool that flags discrepancies for a human to investigate, so err on the side of flagging differences rather than dismissing them.
+
+Respond with ONLY a JSON object, nothing else:
+{{"differs": true or false, "summary": "what specifically differs between the two claims", "reason": "a possible explanation for the difference, such as different test conditions, datasets, or methods"}}
 
 JSON output:"""
 
@@ -81,7 +83,7 @@ JSON output:"""
     except json.JSONDecodeError:
         return None
 
-    if not result.get('contradicts'):
+    if not result.get('differs'):
         return None
 
     return {
