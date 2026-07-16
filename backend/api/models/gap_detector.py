@@ -54,8 +54,35 @@ def cosine_similarity(a, b):
     return np.dot(a, b) / (np.linalg.norm(a) * np.linalg.norm(b))
 
 
-def cluster_and_rank_gaps(all_items, similarity_threshold=0.75, min_doc_mentions=2):
+def same_gap(text_a, text_b):
+    """Ask the LLM whether two limitation/future-work mentions describe the same underlying gap."""
+    prompt = f"""These two sentences are limitations or future-work mentions from research papers:
+
+A: {text_a}
+B: {text_b}
+
+Do these describe the SAME underlying research gap or limitation, even if worded very differently? For example, "not tested at night" and "low-light performance unevaluated" describe the same gap.
+
+Respond with ONLY a JSON object, nothing else:
+{{"same_gap": true or false}}
+
+JSON output:"""
+
+    response = llm.generate(prompt, max_tokens=50)
+    match = re.search(r'\{.*\}', response, re.DOTALL)
+    if not match:
+        return False
+    try:
+        result = json.loads(match.group(0))
+    except json.JSONDecodeError:
+        return False
+    return bool(result.get('same_gap'))
+
+
+def cluster_and_rank_gaps(all_items, similarity_threshold=0.40, min_doc_mentions=2):
     """Group similar limitation/future-work mentions across documents.
+    Uses embedding similarity as a rough first pass, then LLM confirmation
+    for accuracy, since these mentions are often worded very differently.
     Only surface gaps mentioned in 2+ distinct documents (reduces noise)."""
     if len(all_items) < 2:
         return []
@@ -76,15 +103,16 @@ def cluster_and_rank_gaps(all_items, similarity_threshold=0.75, min_doc_mentions
                 continue
             sim = cosine_similarity(embeddings[i], embeddings[j])
             if sim > similarity_threshold:
-                cluster.append(j)
-                used.add(j)
+                if same_gap(all_items[i]['text'], all_items[j]['text']):
+                    cluster.append(j)
+                    used.add(j)
         clusters.append(cluster)
 
     gaps = []
     for cluster in clusters:
         doc_ids_in_cluster = set(all_items[idx]['doc_id'] for idx in cluster)
         if len(doc_ids_in_cluster) < min_doc_mentions:
-            continue  # only keep gaps mentioned in multiple distinct documents
+            continue
 
         representative = all_items[cluster[0]]
         mentions = [all_items[idx] for idx in cluster]
@@ -98,6 +126,5 @@ def cluster_and_rank_gaps(all_items, similarity_threshold=0.75, min_doc_mentions
             'suggestion': f"Mentioned by {len(doc_ids_in_cluster)} document(s): " + "; ".join(m['text'][:100] for m in mentions)
         })
 
-    # Rank by how many documents mention it
     gaps.sort(key=lambda g: g['source_ref'].count(',') + 1, reverse=True)
     return gaps
