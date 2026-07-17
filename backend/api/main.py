@@ -155,8 +155,8 @@ async def delete_document(doc_id: str):
 @app.post("/api/query")
 async def query(payload: dict):
     question = payload.get("question", "")
-    top_k = payload.get("top_k", 10)
-
+    top_k = payload.get("top_k", 5)
+    
     if not question:
         raise HTTPException(status_code=400, detail="question is required")
 
@@ -168,32 +168,51 @@ async def query(payload: dict):
             'llm_time_ms': 0
         }
 
-    # Retrieval
-    retrieval_start = time.time()
+    timings = {}
+
+    # Step 1: Load FAISS index
+    t0 = time.time()
     index = FAISSIndex()
     index.load(INDEX_PATH)
+    timings['faiss_load_ms'] = (time.time() - t0) * 1000
 
+    # Step 2: Embed the query
+    t0 = time.time()
     query_embedding = embedder.embed([question])[0]
-    chunk_ids = index.search(query_embedding, top_k=top_k)
+    timings['query_embed_ms'] = (time.time() - t0) * 1000
 
+    # Step 3: FAISS search
+    t0 = time.time()
+    chunk_ids = index.search(query_embedding, top_k=top_k)
+    timings['faiss_search_ms'] = (time.time() - t0) * 1000
+
+    # Step 4: Fetch chunks from database
+    t0 = time.time()
     all_chunks = SentinelDB.get_all_chunks()
     chunks_by_id = {c['chunk_id']: c for c in all_chunks}
     retrieved_chunks = [chunks_by_id[cid] for cid in chunk_ids if cid in chunks_by_id]
-    retrieval_time = time.time() - retrieval_start
-    logger.info(f"Retrieved {len(retrieved_chunks)} chunks in {retrieval_time*1000:.0f}ms")
+    timings['db_fetch_ms'] = (time.time() - t0) * 1000
+
+    retrieval_time = sum(timings.values()) / 1000
+
+    logger.info(f"Timing breakdown: {timings}")
+
     if not retrieved_chunks:
         return {
             'answer': "No supporting evidence was found within the uploaded documents.",
             'citations': [],
             'retrieval_time_ms': retrieval_time * 1000,
-            'llm_time_ms': 0
+            'llm_time_ms': 0,
+            'timings': timings
         }
 
-    # Build prompt using ONLY retrieved evidence
+    # Step 5: Build prompt
+    t0 = time.time()
     evidence_text = "\n\n".join([
         f"[Source: {c['doc_name']}, Page {c['page']}]\n{c['text']}"
         for c in retrieved_chunks
     ])
+
     prompt = f"""Answer the question using the evidence below. The evidence comes from a document the user uploaded, so trust it as your source of truth.
 
 Evidence:
@@ -207,12 +226,16 @@ Instructions:
 - Do not add outside knowledge beyond what is written in the evidence.
 
 Answer:"""
-    
-# LLM generation
+    timings['prompt_build_ms'] = (time.time() - t0) * 1000
+
+    # Step 6: LLM generation
     llm_start = time.time()
     answer = llm.generate(prompt)
     llm_time = time.time() - llm_start
-    logger.info(f"LLM generated response in {llm_time*1000:.0f}ms")
+    timings['llm_generate_ms'] = llm_time * 1000
+
+    # Step 7: Build citations response
+    t0 = time.time()
     citations = [
         {
             'doc_id': c['doc_id'],
@@ -223,12 +246,16 @@ Answer:"""
         }
         for c in retrieved_chunks
     ]
+    timings['response_build_ms'] = (time.time() - t0) * 1000
+
+    logger.info(f"Full timing breakdown: {timings}")
 
     return {
         'answer': answer,
         'citations': citations,
         'retrieval_time_ms': retrieval_time * 1000,
-        'llm_time_ms': llm_time * 1000
+        'llm_time_ms': llm_time * 1000,
+        'timings': timings
     }
 
 @app.get("/api/contradictions")
