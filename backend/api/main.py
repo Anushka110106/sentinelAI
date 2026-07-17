@@ -1,7 +1,3 @@
-from api.models.claim_extractor import extract_claims
-from api.models.contradiction_detector import find_contradictions
-from api.models.gap_detector import extract_limitations, cluster_and_rank_gaps
-from api.models.graph_builder import extract_entities_and_relationships, merge_graphs
 from fastapi import FastAPI, UploadFile, File, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
@@ -17,6 +13,10 @@ from api.models.faiss_index import FAISSIndex
 from api.models.llm import LLMClient
 from api.models.indexer import rebuild_index, INDEX_PATH
 from api.database import SentinelDB, init_db
+from api.models.claim_extractor import extract_claims
+from api.models.contradiction_detector import find_contradictions
+from api.models.gap_detector import extract_limitations, cluster_and_rank_gaps
+from api.models.graph_builder import extract_entities_and_relationships, merge_graphs
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -37,13 +37,19 @@ os.makedirs(UPLOAD_DIR, exist_ok=True)
 # Loaded once at startup, reused across requests
 embedder = None
 llm = LLMClient()
+faiss_index_cache = None
+
 
 @app.on_event("startup")
 async def startup():
-    global embedder
+    global embedder, faiss_index_cache
     init_db()
     embedder = EmbeddingModel()
+    if os.path.exists(INDEX_PATH):
+        faiss_index_cache = FAISSIndex()
+        faiss_index_cache.load(INDEX_PATH)
     logger.info("Database initialized, embedding model loaded")
+
 
 def run_full_analysis():
     """Recompute contradictions, gaps, and graph data, and cache them in the database.
@@ -83,8 +89,10 @@ def run_full_analysis():
 
     logger.info(f"Analysis complete: {len(contradictions)} contradictions, {len(gaps)} gaps, {len(merged_graph['nodes'])} graph nodes")
 
+
 @app.get("/health")
 async def health():
+    """Report system status: server, Ollama connection, FAISS index, and embedder readiness."""
     ollama_ok = False
     try:
         r = requests.get("http://localhost:11434", timeout=2)
@@ -101,8 +109,10 @@ async def health():
         "embedder_loaded": embedder is not None
     }
 
+
 @app.post("/api/upload")
 async def upload(files: list[UploadFile] = File(...)):
+    """Accept PDF uploads, extract and index their text, then trigger analysis for modules 2-4."""
     if not files or all(f.filename == '' for f in files):
         raise HTTPException(status_code=400, detail="No files provided")
 
@@ -203,13 +213,17 @@ async def upload(files: list[UploadFile] = File(...)):
         }
     )
 
+
 @app.get("/api/documents")
 async def get_documents():
+    """Return the list of all uploaded documents."""
     docs = SentinelDB.get_all_documents()
     return {'documents': docs}
 
+
 @app.delete("/api/documents/{doc_id}")
 async def delete_document(doc_id: str):
+    """Delete a document and its chunks, then rebuild the search index and re-run analysis."""
     docs = SentinelDB.get_all_documents()
     if not any(d['id'] == doc_id for d in docs):
         raise HTTPException(status_code=404, detail="Document not found")
@@ -228,8 +242,10 @@ async def delete_document(doc_id: str):
 
     return {'status': 'ok'}
 
+
 @app.post("/api/query")
 async def query(payload: dict):
+    """Answer a question using only retrieved evidence from uploaded documents, with citations."""
     question = payload.get("question", "")
     top_k = payload.get("top_k", 5)
 
@@ -240,7 +256,8 @@ async def query(payload: dict):
         raise HTTPException(status_code=400, detail="question is too long (max 2000 characters)")
 
     if not isinstance(top_k, int) or top_k < 1 or top_k > 20:
-        top_k = 5  # silently fall back to a safe default rather than erroring
+        top_k = 5
+
     if not os.path.exists(INDEX_PATH):
         return {
             'answer': "No supporting evidence was found within the uploaded documents.",
@@ -251,23 +268,22 @@ async def query(payload: dict):
 
     timings = {}
 
-    # Step 1: Load FAISS index
     t0 = time.time()
-    index = FAISSIndex()
-    index.load(INDEX_PATH)
+    global faiss_index_cache
+    if faiss_index_cache is None:
+        faiss_index_cache = FAISSIndex()
+        faiss_index_cache.load(INDEX_PATH)
+    index = faiss_index_cache
     timings['faiss_load_ms'] = (time.time() - t0) * 1000
 
-    # Step 2: Embed the query
     t0 = time.time()
     query_embedding = embedder.embed([question])[0]
     timings['query_embed_ms'] = (time.time() - t0) * 1000
 
-    # Step 3: FAISS search
     t0 = time.time()
     chunk_ids = index.search(query_embedding, top_k=top_k)
     timings['faiss_search_ms'] = (time.time() - t0) * 1000
 
-    # Step 4: Fetch chunks from database
     t0 = time.time()
     all_chunks = SentinelDB.get_all_chunks()
     chunks_by_id = {c['chunk_id']: c for c in all_chunks}
@@ -287,7 +303,6 @@ async def query(payload: dict):
             'timings': timings
         }
 
-    # Step 5: Build prompt
     t0 = time.time()
     evidence_text = "\n\n".join([
         f"[Source: {c['doc_name']}, Page {c['page']}]\n{c['text']}"
@@ -309,13 +324,11 @@ Instructions:
 Answer:"""
     timings['prompt_build_ms'] = (time.time() - t0) * 1000
 
-    # Step 6: LLM generation
     llm_start = time.time()
     answer = llm.generate(prompt)
     llm_time = time.time() - llm_start
     timings['llm_generate_ms'] = llm_time * 1000
 
-    # Step 7: Build citations response
     t0 = time.time()
     citations = [
         {
@@ -339,16 +352,20 @@ Answer:"""
         'timings': timings
     }
 
+
 @app.get("/api/contradictions")
 async def get_contradictions():
+    """Return cached contradiction analysis results (computed on upload/delete, not per-request)."""
     return {'contradictions': SentinelDB.get_contradictions()}
 
 
 @app.get("/api/gaps")
 async def get_gaps():
+    """Return cached research gap analysis results (computed on upload/delete, not per-request)."""
     return {'gaps': SentinelDB.get_gaps()}
 
 
 @app.get("/api/graph-data")
 async def get_graph_data():
+    """Return cached entity/relationship graph data (computed on upload/delete, not per-request)."""
     return SentinelDB.get_graph_data()

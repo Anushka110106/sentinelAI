@@ -4,11 +4,14 @@ import logging
 logger = logging.getLogger(__name__)
 
 class LLMClient:
+    """Wrapper for calling a local Ollama LLM, with retry logic for timeouts and connection errors."""
+
     def __init__(self, model='llama3.2', endpoint='http://localhost:11434'):
         self.model = model
         self.endpoint = endpoint
 
     def generate(self, prompt, max_tokens=150, retries=2, timeout=90):
+        """Generate a response from the LLM, retrying on timeout/connection errors before giving up."""
         last_error = None
         for attempt in range(retries + 1):
             try:
