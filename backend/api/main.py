@@ -3,11 +3,13 @@ from api.models.contradiction_detector import find_contradictions
 from api.models.gap_detector import extract_limitations, cluster_and_rank_gaps
 from api.models.graph_builder import extract_entities_and_relationships, merge_graphs
 from fastapi import FastAPI, UploadFile, File, HTTPException
+from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import logging
 import uuid
 import os
 import time
+import requests
 
 from api.models.pdf_processor import extract_text_with_metadata
 from api.models.embedding import EmbeddingModel
@@ -83,20 +85,61 @@ def run_full_analysis():
 
 @app.get("/health")
 async def health():
-    return {"status": "ok"}
+    ollama_ok = False
+    try:
+        r = requests.get("http://localhost:11434", timeout=2)
+        ollama_ok = r.status_code == 200
+    except Exception:
+        ollama_ok = False
+
+    index_exists = os.path.exists(INDEX_PATH)
+
+    return {
+        "status": "ok",
+        "ollama_connected": ollama_ok,
+        "faiss_index_exists": index_exists,
+        "embedder_loaded": embedder is not None
+    }
 
 @app.post("/api/upload")
 async def upload(files: list[UploadFile] = File(...)):
+    if not files or all(f.filename == '' for f in files):
+        raise HTTPException(status_code=400, detail="No files provided")
+
     uploaded_docs = []
     errors = []
 
     for file in files:
         try:
+            if not file.filename:
+                errors.append({'filename': 'unknown', 'error': 'Empty filename'})
+                continue
+
+            if not file.filename.lower().endswith('.pdf'):
+                errors.append({'filename': file.filename, 'error': 'Only PDF files are supported'})
+                continue
+
+            content = await file.read()
+            if len(content) == 0:
+                errors.append({'filename': file.filename, 'error': 'File is empty'})
+                continue
+
             filepath = os.path.join(UPLOAD_DIR, file.filename)
             with open(filepath, 'wb') as f:
-                f.write(await file.read())
+                f.write(content)
 
-            chunks = extract_text_with_metadata(filepath)
+            try:
+                chunks = extract_text_with_metadata(filepath)
+            except Exception as e:
+                logger.error(f"PDF extraction failed for {file.filename}: {e}")
+                os.remove(filepath)
+                errors.append({'filename': file.filename, 'error': f'Could not read PDF - it may be corrupted or password-protected: {str(e)}'})
+                continue
+
+            if not chunks:
+                os.remove(filepath)
+                errors.append({'filename': file.filename, 'error': 'No extractable text found in PDF (it may be a scanned/image-based PDF)'})
+                continue
 
             doc_id = str(uuid.uuid4())
             total_pages = chunks[-1]['page_num'] if chunks else 0
@@ -128,17 +171,37 @@ async def upload(files: list[UploadFile] = File(...)):
             })
 
         except Exception as e:
-            logger.error(f"Error processing {file.filename}: {e}")
-            errors.append({'filename': file.filename, 'error': str(e)})
+            logger.error(f"Unexpected error processing {file.filename}: {e}")
+            errors.append({'filename': file.filename, 'error': f'Unexpected error: {str(e)}'})
 
-    # Rebuild the search index so newly uploaded docs are searchable
-    rebuild_index()
+    if uploaded_docs:
+        try:
+            rebuild_index()
+            global faiss_index_cache
+            faiss_index_cache = FAISSIndex()
+            faiss_index_cache.load(INDEX_PATH)
+            run_full_analysis()
+        except Exception as e:
+            logger.error(f"Post-upload processing failed: {e}")
+            errors.append({'filename': 'system', 'error': f'Documents saved but indexing failed: {str(e)}'})
 
-    return {
-        'status': 'ok' if not errors else 'partial',
-        'documents': uploaded_docs,
-        'errors': errors
-    }
+    status_code = 200
+    if uploaded_docs and errors:
+        status = 'partial'
+    elif uploaded_docs:
+        status = 'ok'
+    else:
+        status = 'failed'
+        status_code = 400
+
+    return JSONResponse(
+        status_code=status_code,
+        content={
+            'status': status,
+            'documents': uploaded_docs,
+            'errors': errors
+        }
+    )
 
 @app.get("/api/documents")
 async def get_documents():
@@ -147,19 +210,37 @@ async def get_documents():
 
 @app.delete("/api/documents/{doc_id}")
 async def delete_document(doc_id: str):
-    SentinelDB.delete_document(doc_id)
-    rebuild_index()
-    run_full_analysis()
+    docs = SentinelDB.get_all_documents()
+    if not any(d['id'] == doc_id for d in docs):
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    try:
+        SentinelDB.delete_document(doc_id)
+        rebuild_index()
+        global faiss_index_cache
+        faiss_index_cache = FAISSIndex()
+        if os.path.exists(INDEX_PATH):
+            faiss_index_cache.load(INDEX_PATH)
+        run_full_analysis()
+    except Exception as e:
+        logger.error(f"Delete failed for {doc_id}: {e}")
+        raise HTTPException(status_code=500, detail=f"Delete failed: {str(e)}")
+
     return {'status': 'ok'}
 
 @app.post("/api/query")
 async def query(payload: dict):
     question = payload.get("question", "")
     top_k = payload.get("top_k", 5)
-    
-    if not question:
-        raise HTTPException(status_code=400, detail="question is required")
 
+    if not isinstance(question, str) or not question.strip():
+        raise HTTPException(status_code=400, detail="question must be a non-empty string")
+
+    if len(question) > 2000:
+        raise HTTPException(status_code=400, detail="question is too long (max 2000 characters)")
+
+    if not isinstance(top_k, int) or top_k < 1 or top_k > 20:
+        top_k = 5  # silently fall back to a safe default rather than erroring
     if not os.path.exists(INDEX_PATH):
         return {
             'answer': "No supporting evidence was found within the uploaded documents.",
