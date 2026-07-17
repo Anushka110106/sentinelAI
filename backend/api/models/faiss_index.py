@@ -4,6 +4,9 @@ import json
 import os
 
 class FAISSIndex:
+    """Wraps a FAISS flat L2 index with a persistent chunk_id mapping, so search results
+    can be translated back to actual database chunks after save/load."""
+
     def __init__(self, embedding_dim=384):
         self.index = faiss.IndexFlatL2(embedding_dim)
         self.chunk_mapping = {}  # Maps FAISS index -> chunk_id
@@ -24,12 +27,14 @@ class FAISSIndex:
         return [self.chunk_mapping[i] for i in indices[0] if i in self.chunk_mapping]
 
     def save(self, path):
+        """Save the FAISS index and chunk_id mapping to disk."""
         faiss.write_index(self.index, path)
         mapping_path = path + '.mapping.json'
         with open(mapping_path, 'w') as f:
             json.dump(self.chunk_mapping, f)
 
     def load(self, path):
+        """Load a previously saved FAISS index and its chunk_id mapping from disk."""
         self.index = faiss.read_index(path)
         mapping_path = path + '.mapping.json'
         if os.path.exists(mapping_path):
