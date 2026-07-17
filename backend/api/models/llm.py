@@ -8,7 +8,7 @@ class LLMClient:
         self.model = model
         self.endpoint = endpoint
 
-    def generate(self, prompt, max_tokens=250, retries=2, timeout=90):
+    def generate(self, prompt, max_tokens=150, retries=2, timeout=90):
         last_error = None
         for attempt in range(retries + 1):
             try:
