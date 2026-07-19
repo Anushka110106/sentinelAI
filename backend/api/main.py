@@ -109,6 +109,10 @@ async def health():
         "embedder_loaded": embedder is not None
     }
 
+@app.get("/api/health")
+async def health_alias():
+    """Alias for /health, since some frontend code calls /api/health instead."""
+    return await health()
 
 @app.post("/api/upload")
 async def upload(files: list[UploadFile] = File(...)):
@@ -262,6 +266,7 @@ async def query(payload: dict):
         return {
             'answer': "No supporting evidence was found within the uploaded documents.",
             'citations': [],
+            'found_evidence': False,
             'retrieval_time_ms': 0,
             'llm_time_ms': 0
         }
@@ -298,6 +303,7 @@ async def query(payload: dict):
         return {
             'answer': "No supporting evidence was found within the uploaded documents.",
             'citations': [],
+            'found_evidence': False,
             'retrieval_time_ms': retrieval_time * 1000,
             'llm_time_ms': 0,
             'timings': timings
@@ -347,6 +353,7 @@ Answer:"""
     return {
         'answer': answer,
         'citations': citations,
+        'found_evidence': len(citations) > 0,
         'retrieval_time_ms': retrieval_time * 1000,
         'llm_time_ms': llm_time * 1000,
         'timings': timings

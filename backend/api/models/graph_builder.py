@@ -91,5 +91,15 @@ def merge_graphs(graph_list):
                 all_nodes[node['id']] = node
         all_links.extend(graph['links'])
 
-    return {'nodes': list(all_nodes.values()), 'links': all_links}
+    nodes = list(all_nodes.values())
 
+    # Assign positions in a circle so nodes don't all stack at (0,0)
+    import math
+    n = len(nodes)
+    center_x, center_y, radius = 350, 250, 180
+    for i, node in enumerate(nodes):
+        angle = (2 * math.pi * i) / max(n, 1)
+        node['x'] = center_x + radius * math.cos(angle)
+        node['y'] = center_y + radius * math.sin(angle)
+
+    return {'nodes': nodes, 'links': all_links}
