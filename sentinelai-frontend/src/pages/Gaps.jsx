@@ -37,9 +37,9 @@ export function GapsPage() {
             const res = await getGaps();
             const data = Array.isArray(res.data) ? res.data
                 : Array.isArray(res.data?.gaps) ? res.data.gaps : [];
-            setGaps(data.length > 0 ? data : MOCK_GAPS);
+            setGaps(data);
         } catch {
-            setGaps(MOCK_GAPS);
+            setGaps([]);
         } finally { setLoading(false); }
     };
 

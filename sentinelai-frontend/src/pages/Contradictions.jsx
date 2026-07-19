@@ -57,9 +57,9 @@ export function ContradictionsPage() {
             const data = Array.isArray(res.data) ? res.data
                 : Array.isArray(res.data?.contradictions) ? res.data.contradictions
                 : [];
-            setContradictions(data.length > 0 ? data : MOCK_CONTRADICTIONS);
+            setContradictions(data);
         } catch {
-            setContradictions(MOCK_CONTRADICTIONS);
+            setContradictions([]);
         } finally { setLoading(false); }
     };
 
