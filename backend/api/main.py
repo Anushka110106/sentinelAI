@@ -350,6 +350,8 @@ Answer:"""
 
     logger.info(f"Full timing breakdown: {timings}")
 
+    SentinelDB.add_chat_message(question, answer, citations)
+
     return {
         'answer': answer,
         'citations': citations,
@@ -376,3 +378,15 @@ async def get_gaps():
 async def get_graph_data():
     """Return cached entity/relationship graph data (computed on upload/delete, not per-request)."""
     return SentinelDB.get_graph_data()
+
+@app.get("/api/chat-history")
+async def get_chat_history():
+    """Return saved chat history so the Chat page can restore it on reload."""
+    return {'history': SentinelDB.get_chat_history()}
+
+
+@app.post("/api/chat-history/clear")
+async def clear_chat_history():
+    """Clear all saved chat history."""
+    SentinelDB.clear_chat_history()
+    return {'status': 'ok'}
