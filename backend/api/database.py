@@ -1,6 +1,7 @@
 import sqlite3
 import json
 import os
+import time
 from typing import List, Dict, Optional
 
 DB_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "sentinelai.db")
@@ -64,7 +65,7 @@ def init_db():
         page_b INTEGER,
         description TEXT,
         explanation TEXT,
-        differences TEXT,  -- JSON string of dict
+        differences TEXT,
         confidence REAL
     )
     """)
@@ -104,6 +105,17 @@ def init_db():
         color TEXT,
         FOREIGN KEY (source) REFERENCES graph_nodes (id) ON DELETE CASCADE,
         FOREIGN KEY (target) REFERENCES graph_nodes (id) ON DELETE CASCADE
+    )
+    """)
+
+    # Chat history table
+    cursor.execute("""
+    CREATE TABLE IF NOT EXISTS chat_history (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        question TEXT,
+        answer TEXT,
+        citations TEXT,
+        created_at REAL
     )
     """)
     
@@ -196,7 +208,6 @@ class SentinelDB:
     def save_contradictions(contradictions: List[Dict]):
         conn = get_db_connection()
         cursor = conn.cursor()
-        # Clear old ones
         cursor.execute("DELETE FROM contradictions")
         for item in contradictions:
             differences_str = json.dumps(item.get('differences', {}))
@@ -298,5 +309,41 @@ class SentinelDB:
             "nodes": [dict(n) for n in nodes_rows],
             "links": [dict(l) for l in links_rows]
         }
+
+    @staticmethod
+    def add_chat_message(question: str, answer: str, citations: List[Dict]):
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO chat_history (question, answer, citations, created_at) VALUES (?, ?, ?, ?)",
+            (question, answer, json.dumps(citations), time.time())
+        )
+        conn.commit()
+        conn.close()
+
+    @staticmethod
+    def get_chat_history() -> List[Dict]:
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM chat_history ORDER BY created_at ASC")
+        rows = cursor.fetchall()
+        conn.close()
+        result = []
+        for r in rows:
+            d = dict(r)
+            try:
+                d['citations'] = json.loads(d['citations'])
+            except:
+                d['citations'] = []
+            result.append(d)
+        return result
+
+    @staticmethod
+    def clear_chat_history():
+        conn = get_db_connection()
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM chat_history")
+        conn.commit()
+        conn.close()
 
 init_db()
