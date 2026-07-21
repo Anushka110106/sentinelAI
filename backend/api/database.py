@@ -124,6 +124,12 @@ def init_db():
 
 # Helper class for DB interactions
 class SentinelDB:
+    """Static helper methods for all SQLite operations. Each method opens its own
+    connection, executes, and closes - no persistent connection is held. Methods
+    are grouped by table: documents, chunks, claims, contradictions, gaps,
+    graph_nodes/graph_links, and chat_history. Most follow a simple pattern:
+    add_X() inserts, get_X() or get_all_X() selects, save_X() replaces all rows
+    (delete + reinsert) for cached analysis results."""
     @staticmethod
     def get_all_documents() -> List[Dict]:
         conn = get_db_connection()
